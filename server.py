@@ -6,7 +6,7 @@ class Server:
         self.host = host
         self.port = port
 
-    def send_data(self, data):
+    async def send_data(self, data):
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect((self.host, self.port))

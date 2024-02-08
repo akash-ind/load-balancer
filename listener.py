@@ -1,4 +1,5 @@
-import socket
+import asyncio
+from conn_queue import ConnectionQueue
 
 
 class Listener:
@@ -6,21 +7,14 @@ class Listener:
     def __init__(self):
         self.host = "127.0.0.1"
         self.port = 8283
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.bind((self.host, self.port))
-        self.sock.listen()
-        print(f"Listening on {(self.host, self.port)}")
-        self.conn, addr = self.sock.accept()
-        print(f"Accepted connection from {addr}")
+        self.queue = ConnectionQueue.get_queue()
 
-    def get_data(self):
-        return self.conn.recv(1024)
+    async def accept_connection(self, reader, writer):
+        asyncio.Task(self.queue.accept_connection((reader, writer)))
 
-    def send_data(self, data):
-        self.conn.sendall(data)
+    async def start_server(self):
+        server = await asyncio.start_server(self.accept_connection, self.host, self.port)
 
-    def close(self):
-        self.conn.close()
-        self.sock.close()
-
+        async with server:
+            await server.serve_forever()
 

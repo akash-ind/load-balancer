@@ -1,10 +1,12 @@
-from listener import Listener
+import asyncio
 from server import Server
+from conn_queue import ConnectionQueue
 
 
 class LoadBalancer:
     def __init__(self):
         self.server_pool = []
+        self.connection_queue = ConnectionQueue.get_queue()
 
     def add_server(self, server):
         self.server_pool.append(server)
@@ -15,22 +17,20 @@ class LoadBalancer:
     def get_server(self):
         return self.server_pool[0]
 
-    def main(self):
-        listener = Listener()
-        try:
-            data = listener.get_data()
+    @staticmethod
+    async def get_data(reader):
+        data = await reader.read(-1)
+        return data
 
-            if not self.server_pool:
-                raise Exception("No server available")
+    @staticmethod
+    def send_to_server(server, data):
+        received_data = server.send_data(data)
 
-            server = self.get_server()
-            received_data = server.send_data(data)
 
-            print(received_data)
 
-            listener.send_data(received_data)
-        finally:
-            listener.close()
+    async def main(self):
+        while True:
+            reader, writer = await self.connection_queue.get_connection()
 
 
 if __name__ == "__main__":
@@ -38,5 +38,3 @@ if __name__ == "__main__":
     server = Server(host="127.0.0.1", port=8999)
     load_balancer.add_server(server)
     load_balancer.main()
-
-
